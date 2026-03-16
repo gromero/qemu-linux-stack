@@ -24,6 +24,7 @@ build()
     env CROSS_COMPILE=aarch64-linux-gnu- \
       cmake -DRMM_CONFIG=qemu_virt_defcfg \
       -DCMAKE_BUILD_TYPE=Debug \
+      -DRMM_V1_1=1 \
       -DLOG_LEVEL=40 \
       -S . -B build
     intercept-build --append \

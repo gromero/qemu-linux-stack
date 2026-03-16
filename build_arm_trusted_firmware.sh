@@ -29,6 +29,7 @@ build()
     make PLAT=qemu QEMU_USE_GIC_DRIVER=QEMU_GICV3 \
          BL33=../edk2/Build/ArmVirtQemuKernel-AARCH64/DEBUG_GCC5/FV/QEMU_EFI.fd \
          ENABLE_RME=1 \
+         ENABLE_FEAT_MEC=1 \
          RMM=../tf-rmm/build/Debug/rmm.img \
          LOG_LEVEL=40 \
          DEBUG=1 \
