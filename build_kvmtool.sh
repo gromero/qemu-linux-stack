@@ -13,7 +13,7 @@ clone()
     ./clone.sh \
         kvmtool \
         https://gitlab.arm.com/linux-arm/kvmtool-cca \
-        cca/v9
+        cca-1.1/mec/proto/v1
 }
 
 build()

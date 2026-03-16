@@ -13,7 +13,7 @@ clone()
     ./clone.sh \
         linux \
         https://gitlab.arm.com/linux-arm/linux-cca \
-        cca-host/v11 \
+        cca-1.1/mec/proto/v1 \
         patches/linux-include-linux-compiler-add-DEBUGGER-attribute-for-functions.patch
 }
 
