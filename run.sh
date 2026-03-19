@@ -17,7 +17,7 @@ set -x
 -serial mon:stdio \
 -netdev user,id=vnet \
 -device virtio-net-pci,netdev=vnet \
--M virt,secure=on,virtualization=on,gic-version=3,iommu=smmuv3,acpi=off \
+-M virt,secure=on,virtualization=on,gic-version=3,iommu=smmuv3,acpi=off,mec=on \
 -cpu max,x-rme=on \
 -smp 1 \
 -m 2G \
