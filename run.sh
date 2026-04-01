@@ -30,7 +30,7 @@ trap kill_spdm_emu EXIT
 # wait for spdm_emu
 sleep 1
 
-dd if=/dev/urandom of=out/disk bs=2M count=1
+dd if=/dev/urandom of=out/disk bs=2048M count=1
 
 "$@" \
 -nodefaults \
