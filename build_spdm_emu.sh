@@ -19,8 +19,13 @@ clone()
 
 build()
 {
+    case "$(uname -m)" in
+        x86_64)  spdm_arch=x64 ;;
+        aarch64) spdm_arch=aarch64 ;;
+        *) echo "unsupported host arch: $(uname -m)" >&2; exit 1 ;;
+    esac
     pushd $(readlink -f spdm-emu)
-    cmake -DARCH=x64 -DTOOLCHAIN=GCC -DTARGET=Debug -DCRYPTO=openssl -S . -B build
+    cmake -DARCH=${spdm_arch} -DTOOLCHAIN=GCC -DTARGET=Debug -DCRYPTO=openssl -S . -B build
     pushd build
     make copy_sample_key
     intercept-build --append \
