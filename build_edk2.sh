@@ -33,26 +33,26 @@ build()
     cp -f ../arm-trusted-firmware/build/qemu_sbsa/debug/*.bin Platform/Qemu/Sbsa/
 
     make -C BaseTools -j $(nproc)
-    export GCC5_AARCH64_PREFIX=aarch64-linux-gnu-
+    export GCC_AARCH64_PREFIX=aarch64-linux-gnu-
     # always build in debug to enable traces
     # Set options to boot by default in EFI shell
     intercept-build --append \
     bash -c ". edksetup.sh &&
-    build -q -n $(nproc) -a AARCH64 -b DEBUG -t GCC5 \
+    build -q -n $(nproc) -a AARCH64 -b DEBUG -t GCC \
     -D ENABLE_RME \
     -p edk2-platforms/Platform/Qemu/SbsaQemu/SbsaQemu.dsc \
     --pcd PcdUefiShellDefaultBootEnable=1 \
     --pcd PcdShellDefaultDelay=0 \
     --pcd PcdPlatformBootTimeOut=0"
     sed -i compile_commands.json -e 's/"cc"/"aarch64-linux-gnu-gcc"/'
-    truncate -s 256M Build/SbsaQemuRme/DEBUG_GCC5/FV/SBSA_FLASH*.fd
+    truncate -s 256M Build/SbsaQemuRme/DEBUG_GCC/FV/SBSA_FLASH*.fd
     popd
 }
 
 output()
 {
     mkdir -p out
-    rsync ./edk2/Build/SbsaQemuRme/DEBUG_GCC5/FV/SBSA_FLASH* out/
+    rsync ./edk2/Build/SbsaQemuRme/DEBUG_GCC/FV/SBSA_FLASH* out/
 }
 
 clone
