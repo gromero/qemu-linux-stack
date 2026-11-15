@@ -13,14 +13,9 @@ clone()
     ./clone.sh \
         tf-rmm \
         https://review.trustedfirmware.org/TF-RMM/tf-rmm.git \
-        topics/da_alp12_v2 \
-        patches/rmm-support-lower-pmu-versions.patch \
+        9c342901bb7a9f265312f371280536cf9afb5b79 \
         patches/rmm-silence-Unhandled-read-write-regs-info.patch \
-        patches/rmm-arm-smmuv3-update-base-for-qemu.patch \
-        patches/rmm-set-cmd-and-evt-queue-sizes-based-on-available-memory \
-        patches/rmm-add-granules-for-non-coherent-devices.patch \
-        patches/rmm-lib-dsm-Fix-dvsec-offset.patch \
-        patches/rmm-lib-slot_buf-Fix-4-bytes-read-write-operations.patch
+        patches/rmm-add-granules-for-non-coherent-devices.patch
 }
 
 build()
@@ -30,7 +25,6 @@ build()
       cmake -DRMM_CONFIG=qemu_sbsa_defcfg \
       -DCMAKE_BUILD_TYPE=Debug \
       -DLOG_LEVEL=40 \
-      -DRMM_V1_1=ON \
       -S . -B build
     intercept-build --append \
     make -C build -j "$(nproc)"

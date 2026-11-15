@@ -13,15 +13,9 @@ clone()
     ./clone.sh \
         arm-trusted-firmware \
         https://github.com/ARM-software/arm-trusted-firmware \
-        v2.13.0 \
-        patches/arm-trusted-firmware-support-FEAT_TCR2-and-FEAT-SCTLR2.patch \
-        patches/arm-trusted-firmware-support-PIE-GCS.patch \
-        patches/arm-trusted-firmware-support-move-manifest-definition.patch \
-        patches/arm-trusted-firmware-add-pcie-root-information.patch \
-        patches/arm-trusted-firmware-add-stubs-for-IDE-key-management.patch \
-        patches/arm-trusted-firmware-plat-qemu-initialize-smmuv3-with-RME.patch \
-        patches/arm-trusted-firmware-add-device-non-coherent-map.patch \
-        patches/arm-trusted-firmware-add-pas-for-pcie-mmio.patch
+        a881364e03b0c5b3a8c00f20ad6fbdda53a57031 \
+        patches/arm-trusted-firmware-qemu-sbsa-hand-the-SMMUv3-over-to-the-RMM.patch \
+        patches/arm-trusted-firmware-qemu-sbsa-add-FIRME-IDE-KM-stubs.patch
 }
 
 build()
@@ -33,7 +27,8 @@ build()
     # https://trustedfirmware-a.readthedocs.io/en/latest/components/realm-management-extension.html#building-and-running-tf-a-with-rme
     intercept-build --append \
     make PLAT=qemu_sbsa \
-         ENABLE_RME=1 \
+         ENABLE_FEAT_RME=1 \
+         ENABLE_RMM=1 \
          RMM=../tf-rmm/build/Debug/rmm.img \
          LOG_LEVEL=40 \
          DEBUG=1 \

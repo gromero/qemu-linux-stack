@@ -13,7 +13,7 @@ clone()
     ./clone.sh \
         linux \
         https://gitlab.arm.com/linux-arm/linux-cca \
-        cca/tdisp-upstream-post-v1.3 \
+        cca/topics/cca-da-gmem-backend-v5 \
         patches/linux-include-linux-compiler-add-DEBUGGER-attribute-for-functions.patch
 }
 
@@ -54,6 +54,9 @@ build()
     scripts/config --enable IOMMUFD_DRIVER
     scripts/config --enable VFIO_DEVICE_CDEV
     scripts/config --disable VFIO_CONTAINER
+    # guest_memfd-backed device memory (cca-da-gmem-backend)
+    scripts/config --enable VFIO_PCI
+    scripts/config --enable VFIO_PCI_GMEM
 
 
     # disable all modules

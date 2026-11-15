@@ -13,13 +13,13 @@ clone()
     ./clone.sh \
         edk2 \
         https://github.com/tianocore/edk2.git \
-        edk2-stable202505
+        edk2-stable202608
 
     pushd edk2
     ../clone.sh \
         edk2-platforms \
         https://github.com/tianocore/edk2-platforms \
-        9562f2e64b2f817a7fd9455ce9dcd32d8500793d
+        d672a812054e9d4fe5868a1ee65f438c10710535
     popd
 }
 

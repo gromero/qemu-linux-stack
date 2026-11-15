@@ -1,0 +1,158 @@
+From 6b5e6a4e446c6fc09bf53ef5cc2fac8bd03a803e Mon Sep 17 00:00:00 2001
+From: Gustavo Romero <gusbromero@gmail.com>
+Date: Sun, 15 Nov 2026 21:07:06 +0100
+Subject: [PATCH 1/2] feat(qemu-sbsa): hand the SMMUv3 over to the RMM
+
+The RMM (TF-RMM main) no longer hardcodes the SMMUv3 base and only
+manages SMMUs described in the boot manifest. Describe the sbsa-ref
+SMMUv3 in the manifest, computing the Realm page base from
+SMMU_ROOT_IDR0.BA_REALM like the FVP does, and initialise the SMMU
+Root registers in BL31 before handing it over.
+
+Ported from the TF-A v2.13-based patch
+'plat/qemu/: initialize smmuv3 with RME'.
+---
+ plat/qemu/common/qemu_bl31_setup.c         | 23 ++++++++++++++
+ plat/qemu/common/qemu_common.c             | 36 +++++++++++++++++++++-
+ plat/qemu/qemu_sbsa/include/platform_def.h |  4 +++
+ plat/qemu/qemu_sbsa/platform.mk            |  4 +++
+ 4 files changed, 66 insertions(+), 1 deletion(-)
+
+diff --git a/plat/qemu/common/qemu_bl31_setup.c b/plat/qemu/common/qemu_bl31_setup.c
+index 53fea000..f34107b4 100644
+--- a/plat/qemu/common/qemu_bl31_setup.c
++++ b/plat/qemu/common/qemu_bl31_setup.c
+@@ -26,6 +26,10 @@
+ #endif /* ENABLE_FEAT_RME */
+ #ifdef PLAT_qemu_sbsa
+ #include <sbsa_platform.h>
++#if ENABLE_RMM
++#include <drivers/arm/smmu_v3.h>
++#include <drivers/generic_delay_timer.h>
++#endif
+ #endif
+ 
+ #include "qemu_private.h"
+@@ -325,6 +329,25 @@ void bl31_plat_arch_setup(void)
+ 			ERROR("gpt_runtime_init() failed!\n");
+ 			panic();
+ 		}
++
++#if defined(PLAT_qemu_sbsa) && ENABLE_RMM
++		/*
++		 * The SMMUv3 is described to the RMM in the boot manifest.
++		 * Program its Root registers (GPC) and put it in a sane
++		 * state before handing it over.
++		 */
++		generic_delay_timer_init();
++
++		if (smmuv3_security_init(PLAT_QEMU_SMMUV3_BASE) != 0) {
++			ERROR("smmuv3_security_init() failed!\n");
++			panic();
++		}
++
++		if (smmuv3_init(PLAT_QEMU_SMMUV3_BASE) != 0) {
++			ERROR("smmuv3_init() failed!\n");
++			panic();
++		}
++#endif
+ 	}
+ }
+ 
+diff --git a/plat/qemu/common/qemu_common.c b/plat/qemu/common/qemu_common.c
+index 420dfa31..e7170c47 100644
+--- a/plat/qemu/common/qemu_common.c
++++ b/plat/qemu/common/qemu_common.c
+@@ -18,6 +18,10 @@
+ #include <services/firme/firme_mecid.h>
+ #if ENABLE_RMM
+ #include <services/rmm_core_manifest.h>
++#ifdef PLAT_qemu_sbsa
++#include <drivers/arm/smmu_v3.h>
++#include <lib/mmio.h>
++#endif
+ #endif
+ #ifdef PLAT_qemu_sbsa
+ #include <sbsa_platform.h>
+@@ -331,10 +335,27 @@ const struct root_complex_info rc_data[] = {
+ /* Number of device non-coherent address ranges */
+ #define QEMU_RMM_COH_REGIONS	ARRAY_SIZE(coh_region_data)
+ /* Number of SMMUs */
+-#define QEMU_RMM_SMMU_COUNT	0
++#define QEMU_RMM_SMMU_COUNT	1
+ /* Number of PCIe Root Complexes */
+ #define QEMU_RMM_RC_COUNT	ARRAY_SIZE(rc_data)
+ 
++static void plat_get_smmu_info(struct smmu_info *smmu_ptr)
++{
++	uint64_t o_realm;
++
++	smmu_ptr->smmu_base = PLAT_QEMU_SMMUV3_BASE;
++
++	/*
++	 * Read SMMU_ROOT_IDR0.BA_REALM[31:22] to locate Realm Register
++	 * Page 0: O_REALM = 0x20000 + (BA_REALM * 0x10000).
++	 */
++	o_realm = mmio_read_32(PLAT_QEMU_SMMUV3_BASE + SMMU_ROOT_IDR0) &
++		  SMMU_ROOT_IDR0_BA_REALM_MASK;
++	o_realm = 0x20000UL + (o_realm >> (SMMU_ROOT_IDR0_BA_REALM_SHIFT - 16U));
++
++	smmu_ptr->smmu_r_base = PLAT_QEMU_SMMUV3_BASE + o_realm;
++}
++
+ #endif /* PLAT_qemu */
+ 
+ /*
+@@ -681,6 +702,19 @@ int plat_rmmd_load_manifest(struct rmm_manifest *manifest)
+ 	manifest->plat_smmu.smmus = NULL;
+ 	manifest->plat_smmu.checksum = 0UL;
+ 
++#if QEMU_RMM_SMMU_COUNT
++	for (i = 0; i < num_smmus; i++) {
++		plat_get_smmu_info(&smmu_ptr[i]);
++	}
++
++	checksum = num_smmus + (uint64_t)smmu_ptr;
++	checksum += checksum_calc((uint64_t *)smmu_ptr,
++				  sizeof(struct smmu_info) * num_smmus);
++	manifest->plat_smmu.smmus = smmu_ptr;
++	/* Checksum must be 0 */
++	manifest->plat_smmu.checksum = ~checksum + 1UL;
++#endif
++
+ 	/* Ensure the manifest is not larger than the shared buffer */
+ 	assert((sizeof(struct rmm_manifest) +
+ 		(sizeof(struct console_info) * num_consoles) +
+diff --git a/plat/qemu/qemu_sbsa/include/platform_def.h b/plat/qemu/qemu_sbsa/include/platform_def.h
+index a479f2f5..0145b46f 100644
+--- a/plat/qemu/qemu_sbsa/include/platform_def.h
++++ b/plat/qemu/qemu_sbsa/include/platform_def.h
+@@ -242,6 +242,10 @@
+ /* This is map from NORMAL_UART up to SECURE_UART_MM */
+ #define DEVICE1_BASE			0x60000000
+ #define DEVICE1_SIZE			0x10041000
++
++/* SMMUv3 (see @sbsa_ref_memmap in QEMU's hw/arm/sbsa-ref.c) */
++#define PLAT_QEMU_SMMUV3_BASE		UL(0x60050000)
++#define PLAT_ARM_SMMUV3_ROOT_REG_OFFSET	UL(0x20000)
+ /* This is a map for SECURE_EC */
+ #define DEVICE2_BASE			0x50000000
+ #define DEVICE2_SIZE			0x00001000
+diff --git a/plat/qemu/qemu_sbsa/platform.mk b/plat/qemu/qemu_sbsa/platform.mk
+index 46ef3bcf..c1c26f18 100644
+--- a/plat/qemu/qemu_sbsa/platform.mk
++++ b/plat/qemu/qemu_sbsa/platform.mk
+@@ -61,6 +61,10 @@ endif
+ 
+ ifeq (${ENABLE_RMM},1)
+ BL31_SOURCES		+=	${PLAT_QEMU_PATH}/plat_rmm_mem_carveout.c
++# SMMUv3 is handed over to the RMM, so EL3 needs to set it up
++BL31_SOURCES		+=	drivers/arm/smmu/smmu_v3.c			\
++				drivers/delay_timer/delay_timer.c		\
++				drivers/delay_timer/generic_delay_timer.c
+ endif
+ 
+ 
+-- 
+2.47.3
+
