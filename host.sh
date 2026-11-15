@@ -7,13 +7,10 @@ set -x
 
 lspci -vvv
 
-# disk_hash=$(md5sum < /dev/sda | cut -f 1 -d ' ')
+disk_hash=$(md5sum < /dev/sda | cut -f 1 -d ' ')
 if [ -f /host/out/disk ]; then
-echo "found disk"
-#    diff <(echo $disk_hash) <(md5sum /host/out/disk | cut -f 1 -d ' ')
+    diff <(echo $disk_hash) <(md5sum /host/out/disk | cut -f 1 -d ' ')
 fi
-
-# exit 10
 
 # find device to connect
 sys_tsm_connect=$(find /sys | grep tsm/connect | tail -n 1)
@@ -26,11 +23,7 @@ echo $dev
 echo $dev > /sys/bus/pci/devices/$dev/driver/unbind
 echo vfio-pci > /sys/bus/pci/devices/$dev/driver_override
 echo $dev > /sys/bus/pci/drivers_probe
-
-# exit 12
-# writing to connect file effectively starts the DA
 echo tsm0 > /sys/bus/pci/devices/$dev/tsm/connect
-
 
 # prepare nested guest commands
 mkdir -p guest
@@ -42,6 +35,7 @@ set -x
 
 lspci -vvv
 
+diff <(echo $disk_hash) <(md5sum /dev/sda | cut -f 1 -d ' ')
 echo "unbind device"
 echo 0000:00:00.0 > /sys/bus/pci/devices/0000:00:00.0/driver/unbind
 echo "lock device"
@@ -58,6 +52,7 @@ echo 0000:00:00.0 > /sys/bus/pci/drivers_probe
 [ -e /dev/sda ] || sleep 1
 [ -e /dev/sda ] || sleep 1
 [ -e /dev/sda ]
+diff <(echo $disk_hash) <(md5sum /dev/sda | cut -f 1 -d ' ')
 EOF
 chmod +x guest/da_connect.sh
 umount guest
