@@ -57,6 +57,10 @@ build()
     # guest_memfd-backed device memory (cca-da-gmem-backend)
     scripts/config --enable VFIO_PCI
     scripts/config --enable VFIO_PCI_GMEM
+    # host share (/host) over virtio-9p, used by rootfs/common/init
+    scripts/config --enable NET_9P
+    scripts/config --enable NET_9P_VIRTIO
+    scripts/config --enable 9P_FS
 
 
     # disable all modules
