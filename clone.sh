@@ -59,7 +59,8 @@ if [ ! -d $src ]; then
     popd
 
     for patch in $patches; do
-        git -C $src.tmp am $(readlink -f $patch)
+        # --keep-cr: some trees (e.g. edk2) have CRLF files
+        git -C $src.tmp am --keep-cr $(readlink -f $patch)
     done
 
     pushd $src.tmp

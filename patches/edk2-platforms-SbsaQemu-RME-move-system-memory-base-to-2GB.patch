@@ -1,0 +1,30 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Gustavo Romero <gromero@redhat.com>
+Date: Mon, 16 Nov 2026 19:04:44 +0100
+Subject: [PATCH] Platform/Qemu/SbsaQemu: move RME system memory base to 2GB
+
+TF-A now rounds the qemu_sbsa RMM carveout up to 2GB, so that the Normal
+world DRAM starts on a 1GB boundary as the host's RMM granule tracking
+checks expect. Move PcdSystemMemoryBase accordingly: it must match the
+DRAM base TF-A reports (SbsaQemuMem.c asserts on it).
+
+---
+diff --git a/Platform/Qemu/SbsaQemu/SbsaQemu.dsc b/Platform/Qemu/SbsaQemu/SbsaQemu.dsc
+index 85b1027fa..1f2daff7e 100644
+--- a/Platform/Qemu/SbsaQemu/SbsaQemu.dsc
++++ b/Platform/Qemu/SbsaQemu/SbsaQemu.dsc
+@@ -393,9 +393,10 @@ DEFINE NETWORK_HTTP_BOOT_ENABLE       = FALSE
+   !if $(ENABLE_RME)
+     #
+     # When RME is enabled the RMM is installed at 0x10000000000
+-    # and the system base memory bumped by 1072MB.
++    # and the system base memory bumped by 2GB (TF-A rounds the
++    # 1072MB RMM carveout up so that Normal world DRAM is 1GB aligned).
+     #
+-    gArmTokenSpaceGuid.PcdSystemMemoryBase|0x10043000000
++    gArmTokenSpaceGuid.PcdSystemMemoryBase|0x10080000000
+   !else
+     gArmTokenSpaceGuid.PcdSystemMemoryBase|0x10000000000
+   !endif
+-- 
+2.47.3
