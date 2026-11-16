@@ -69,7 +69,7 @@ cd /host
     --debug-ioport \
     --kernel /host/out/Image \
     --disk /host/out/guest.ext4 \
-    --iommufd-vdevice \
+    --viommu \
     --vfio-pci $dev \
     --params "root=/dev/vda rw init=/init -- $INIT"
 
