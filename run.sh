@@ -39,7 +39,7 @@ dd if=/dev/urandom of=out/disk bs=2048M count=1
 -netdev user,id=vnet \
 -device virtio-net-pci,netdev=vnet \
 -M sbsa-ref \
--cpu max,x-rme=on \
+-cpu max,x-rme=on,lpa2=off \
 -smp 1 \
 -m 2G \
 -drive file=out/SBSA_FLASH0.fd,format=raw,if=pflash \
