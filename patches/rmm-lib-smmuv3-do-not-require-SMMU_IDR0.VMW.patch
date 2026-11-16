@@ -1,0 +1,44 @@
+From 9f13ebe12da708b6b1ea57c4e295ce481f14e120 Mon Sep 17 00:00:00 2001
+From: Gustavo Romero <gusbromero@gmail.com>
+Date: Mon, 16 Nov 2026 17:39:59 +0100
+Subject: [PATCH] fix(lib/smmuv3): do not require SMMU_IDR0.VMW
+
+RMM only ever programs SMMU_R_CR0.VMW = 0 (TLB invalidations match VMID
+tags exactly). When SMMU_IDR0.VMW == 0 that field is RES0, so writing 0
+is equally valid and VMID wildcard matching is never used.
+
+QEMU's SMMUv3 does not advertise VMW, so the hard requirement made RMM
+disable Realm device assignment at boot:
+
+  SMMUv3 @0x60050000: VMID wildcard-matching not supported
+  SMMUv3: Failed to initialize driver
+  Realm device assignment is not supported
+
+Only log the absence of VMW instead of failing.
+---
+ lib/smmuv3/src/smmuv3.c | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/lib/smmuv3/src/smmuv3.c b/lib/smmuv3/src/smmuv3.c
+index 031b19a5..a25356e8 100644
+--- a/lib/smmuv3/src/smmuv3.c
++++ b/lib/smmuv3/src/smmuv3.c
+@@ -833,11 +833,16 @@ static int get_features(struct smmuv3_dev *smmu)
+ 		return -ENOTSUP;
+ 	}
+ 
++	/*
++	 * RMM programs SMMU_R_CR0.VMW to 0 (exact VMID matching). When
++	 * SMMU_IDR0.VMW == 0 that field is RES0, so writing 0 is still valid
++	 * and the behaviour is the same: VMID wildcard matching is not needed.
++	 * QEMU's SMMUv3 does not implement VMW.
++	 */
+ 	if ((idr0 & IDR0_VMW_BIT) != 0U) {
+ 		SMMU_DEBUG("\tVMW\n");
+ 	} else {
+-		SMMU_ERROR(smmu, "VMID wildcard-matching not supported\n");
+-		return -ENOTSUP;
++		SMMU_DEBUG("\tVMID wildcard-matching not supported\n");
+ 	}
+ 
+ 	if ((idr0 & IDR0_ASID16_BIT) != 0U) {

@@ -16,7 +16,8 @@ clone()
         7f0d6b222bc02c79f45d1cb95c26d3586db18153 \
         patches/rmm-silence-Unhandled-read-write-regs-info.patch \
         patches/rmm-add-granules-for-non-coherent-devices.patch \
-        patches/rmm-runtime-rmi-do-not-require-PMUv3p7-at-boot.patch
+        patches/rmm-runtime-rmi-do-not-require-PMUv3p7-at-boot.patch \
+        patches/rmm-lib-smmuv3-do-not-require-SMMU_IDR0.VMW.patch
 }
 
 build()
