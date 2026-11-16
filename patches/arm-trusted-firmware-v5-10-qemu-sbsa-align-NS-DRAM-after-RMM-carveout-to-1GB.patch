@@ -1,0 +1,42 @@
+From 70f50e8fb46425f9d9f5136915f0613fb9ab7405 Mon Sep 17 00:00:00 2001
+From: Gustavo Romero <gusbromero@gmail.com>
+Date: Mon, 16 Nov 2026 18:54:04 +0100
+Subject: [PATCH] fix(qemu-sbsa): align the Non-secure DRAM after the RMM
+ carveout to 1GB
+
+The RMM carveout was 0x43000000 bytes from the start of DRAM, so the
+Non-secure DRAM handed to the host started at DRAM0 + 0x43000000. The host
+(KVM CCA) verifies RMM granule tracking per 1GB tracking region, aligning
+the start of each memory region down to 1GB, and the first such region
+then starts inside the carveout, which RMM does not track:
+
+  kvm [1]: Granule tracking for region isn't fine/conventional: 10040000000
+
+and KVM disables Realm support. Round the carveout up to 2GB. The machine
+needs more than 2GB of RAM (e.g. -m 4G) to leave DRAM to the Normal world.
+---
+ plat/qemu/qemu_sbsa/include/platform_def.h | 10 ++++++++--
+ 1 file changed, 8 insertions(+), 2 deletions(-)
+
+diff --git a/plat/qemu/qemu_sbsa/include/platform_def.h b/plat/qemu/qemu_sbsa/include/platform_def.h
+index 3fba5e543..638e1860c 100644
+--- a/plat/qemu/qemu_sbsa/include/platform_def.h
++++ b/plat/qemu/qemu_sbsa/include/platform_def.h
+@@ -487,9 +487,15 @@ CASSERT((PLAT_QEMU_L0_GPT_BASE & (PLAT_QEMU_L0_GPT_SIZE - 1)) == 0,
+ 					MT_MEMORY | MT_RW | EL3_PAS)
+ 
+ #if ENABLE_RMM
+-/* Reserved some DRAM space for RMM (1072MB) */
++/*
++ * Reserved some DRAM space for RMM. The RMM needs 1072MB (RMM_MAX_SIZE in
++ * TF-RMM's qemu_sbsa_defcfg), but round the carveout up to 2GB so that the
++ * Non-secure DRAM that follows starts on a 1GB boundary: the host checks RMM
++ * granule tracking per 1GB tracking region (RMI_GRANULE_TRACKING_GET) and
++ * a region straddling the carveout is not reported as fine/conventional.
++ */
+ #define REALM_DRAM_BASE			PLAT_QEMU_DRAM0_BASE
+-#define REALM_DRAM_SIZE			0x43000000
++#define REALM_DRAM_SIZE			0x80000000
+ 
+ #define PLAT_QEMU_RMM_SIZE		(REALM_DRAM_SIZE - RMM_SHARED_SIZE)
+ #define PLAT_QEMU_RMM_SHARED_SIZE	(PAGE_SIZE)	/* 4KB */

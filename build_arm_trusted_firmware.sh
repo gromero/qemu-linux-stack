@@ -22,7 +22,8 @@ clone()
         patches/arm-trusted-firmware-v5-06-qemu-add-plat-rmmd-reserve-memory-for-SBSA-platform.patch \
         patches/arm-trusted-firmware-v5-07-qemu-make-BDF-mapping-top-inclusive.patch \
         patches/arm-trusted-firmware-v5-08-qemu-sbsa-hand-the-SMMUv3-over-to-the-RMM.patch \
-        patches/arm-trusted-firmware-v5-09-qemu-Add-stubs-to-support-IDE-key-management.patch
+        patches/arm-trusted-firmware-v5-09-qemu-Add-stubs-to-support-IDE-key-management.patch \
+        patches/arm-trusted-firmware-v5-10-qemu-sbsa-align-NS-DRAM-after-RMM-carveout-to-1GB.patch
 }
 
 build()

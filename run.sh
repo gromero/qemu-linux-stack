@@ -41,7 +41,7 @@ dd if=/dev/urandom of=out/disk bs=2048M count=1
 -M sbsa-ref \
 -cpu max,x-rme=on,lpa2=off \
 -smp 1 \
--m 2G \
+-m 4G \
 -drive file=out/SBSA_FLASH0.fd,format=raw,if=pflash \
 -drive file=out/SBSA_FLASH1.fd,format=raw,if=pflash \
 -drive file=fat:rw:out/EFI,format=raw \
