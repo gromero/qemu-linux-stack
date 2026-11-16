@@ -36,6 +36,10 @@ build()
     make PLAT=qemu_sbsa \
          ENABLE_FEAT_RME=1 \
          ENABLE_RMM=1 \
+         `# runtime-detect AMU/trace like FVP: otherwise CPTR_EL3.{TAM,TTA}` \
+         `# are unknown bits and the RMM's FEATURE_AVAILABILITY query asserts` \
+         ENABLE_FEAT_AMU=2 \
+         ENABLE_SYS_REG_TRACE_FOR_NS=2 \
          RMM=../tf-rmm/build/Debug/rmm.img \
          LOG_LEVEL=40 \
          DEBUG=1 \
