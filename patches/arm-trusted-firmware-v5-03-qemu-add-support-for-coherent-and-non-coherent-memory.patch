@@ -1,0 +1,241 @@
+From 4e6cb1b2875295cdd2602016e9bb462bd98c861b Mon Sep 17 00:00:00 2001
+From: Mathieu Poirier <mathieu.poirier@linaro.org>
+Date: Tue, 5 May 2026 14:32:22 -0600
+Subject: [PATCH] feat(qemu): add support for coherent and non-coherent memory
+
+Add support for coherent and non-coherent memory areas of the RMM
+manifest in order to satisfy requirements for version 5.
+
+Change-Id: I9142dddf76f8f5715e5665bda57f1bc1dc1e2352
+Signed-off-by: Mathieu Poirier <mathieu.poirier@linaro.org>
+(cherry picked from commit f4f8e734b347b020e0d04a1ed189c98ab2b78a3a)
+---
+ plat/qemu/common/qemu_bl31_setup.c            |   2 +
+ plat/qemu/common/qemu_common.c                | 109 +++++++++++++++++-
+ plat/qemu/qemu_sbsa/include/platform_def.h    |  12 ++
+ .../qemu_sbsa/include/qemu_sbsa_pas_def.h     |   8 ++
+ 4 files changed, 130 insertions(+), 1 deletion(-)
+
+diff --git a/plat/qemu/common/qemu_bl31_setup.c b/plat/qemu/common/qemu_bl31_setup.c
+index ac57eadf..6480233b 100644
+--- a/plat/qemu/common/qemu_bl31_setup.c
++++ b/plat/qemu/common/qemu_bl31_setup.c
+@@ -200,6 +200,8 @@ static pas_region_t pas_regions[] = {
+ 	QEMU_PAS_NS0,
+ #if ENABLE_RMM
+ 	QEMU_PAS_REALM,
++	QEMU_PAS_PCI_MEM_1,
++	QEMU_PAS_PCI_MEM_2,
+ #endif
+ };
+ 
+diff --git a/plat/qemu/common/qemu_common.c b/plat/qemu/common/qemu_common.c
+index e9ebc611..b0fb8d53 100644
+--- a/plat/qemu/common/qemu_common.c
++++ b/plat/qemu/common/qemu_common.c
+@@ -239,6 +239,15 @@ static void plat_get_memory_node(int index, struct memory_bank *bank_ptr)
+ 	bank_ptr->base = NS_DRAM0_BASE;
+ 	bank_ptr->size = NS_DRAM0_SIZE;
+ }
++
++const struct memory_bank ncoh_region_data[] = {};
++const struct memory_bank coh_region_data[] = {};
++
++/* Number of device non-coherent address ranges */
++#define QEMU_RMM_NCOH_REGIONS	ARRAY_SIZE(ncoh_region_data)
++/* Number of device coherent address ranges */
++#define QEMU_RMM_COH_REGIONS	ARRAY_SIZE(coh_region_data)
++
+ #elif PLAT_qemu_sbsa
+ static uint32_t plat_get_num_memnodes(void)
+ {
+@@ -256,6 +265,28 @@ static void plat_get_memory_node(int index, struct memory_bank *bank_ptr)
+ 	bank_ptr->base = data.addr_base;
+ 	bank_ptr->size = data.addr_size;
+ }
++
++struct memory_bank ncoh_region_data[] = {
++	/* SBSA SBSA_PCIE_MMIO region */
++	{SBSA_PCIE_MMIO_BASE,
++	 SBSA_PCIE_MMIO_SIZE
++	},
++	/*
++	 * SBSA SBSA_PCIE_MMIO_HIGH region.  The architecture supports up
++	 * to 1020GB but 10GB should be plenty.
++	 */
++	{SBSA_PCIE_MMIO_HIGH_BASE,
++	 SBSA_PCIE_MMIO_HIGH_SIZE
++	}
++};
++
++const struct memory_bank coh_region_data[] = {};
++
++/* Number of device non-coherent address ranges */
++#define QEMU_RMM_NCOH_REGIONS	ARRAY_SIZE(ncoh_region_data)
++/* Number of device non-coherent address ranges */
++#define QEMU_RMM_COH_REGIONS	ARRAY_SIZE(coh_region_data)
++
+ #endif /* PLAT_qemu */
+ 
+ /*
+@@ -275,6 +306,50 @@ static uint64_t checksum_calc(uint64_t *buffer, size_t size)
+ 	return sum;
+ }
+ 
++static void set_memory_region(struct memory_info *region_ptr,
++			      struct memory_bank *bank_ptr,
++			      const struct memory_bank *bank_data,
++			      uint64_t num_bank_data)
++{
++	struct memory_bank *dst;
++	uint64_t checksum, i;
++
++	if (!region_ptr || !bank_ptr || !bank_data)
++		return;
++
++	if (!num_bank_data) {
++		region_ptr->num_banks = 0UL;
++		region_ptr->banks = NULL;
++		region_ptr->checksum = 0UL;
++		return;
++	}
++
++
++	/* Calculate the checksum of address range info structure */
++	checksum = num_bank_data + (uint64_t)bank_ptr;
++
++	/* Zero out the PCIe region info struct */
++	memset((void *)bank_ptr, 0,
++	       sizeof(struct memory_bank) * num_bank_data);
++
++	dst = bank_ptr;
++
++	for (i = 0; i < num_bank_data; i++) {
++		memcpy((void *)dst, (void *)(bank_data + i),
++		       sizeof(struct memory_bank));
++		dst++;
++	}
++
++	/* Update checksum */
++	checksum += checksum_calc((uint64_t *)bank_ptr,
++				  sizeof(struct memory_bank) * num_bank_data);
++
++	/* Checksum must be 0 */
++	region_ptr->checksum = ~checksum + 1UL;
++	region_ptr->num_banks = num_bank_data;
++	region_ptr->banks = bank_ptr;
++}
++
+ /*
+  * Boot manifest structure illustration:
+  *
+@@ -387,13 +462,18 @@ int plat_rmmd_load_manifest(struct rmm_manifest *manifest)
+ {
+ 	int i, last;
+ 	uint64_t checksum;
++	uint64_t num_ncoh_regions, num_coh_regions;
+ 	size_t num_banks = plat_get_num_memnodes();
+ 	size_t num_consoles = 1;
+ 	struct memory_bank *bank_ptr;
++	struct memory_bank *ncoh_region_ptr, *coh_region_ptr;
+ 	struct console_info *console_ptr;
+ 
+ 	assert(manifest != NULL);
+ 
++	num_ncoh_regions = QEMU_RMM_NCOH_REGIONS;
++	num_coh_regions = QEMU_RMM_COH_REGIONS;
++
+ 	manifest->version = RMMD_MANIFEST_VERSION;
+ 	manifest->padding = 0U; /* RES0 */
+ 	manifest->plat_data = (uintptr_t)NULL;
+@@ -406,13 +486,29 @@ int plat_rmmd_load_manifest(struct rmm_manifest *manifest)
+ 	console_ptr = (struct console_info *)
+ 		((uintptr_t)bank_ptr + (num_banks * sizeof(*bank_ptr)));
+ 
++	ncoh_region_ptr = (struct memory_bank *)
++			((uintptr_t)console_ptr + (num_consoles *
++						sizeof(struct console_info)));
++	coh_region_ptr = (struct memory_bank *)
++			((uintptr_t)ncoh_region_ptr + (num_ncoh_regions *
++						sizeof(struct memory_bank)));
++
++	/* Currently supported */
+ 	manifest->plat_dram.banks = bank_ptr;
+ 	manifest->plat_console.consoles = console_ptr;
+ 
++	/* Currently not supported */
++	manifest->plat_coh_region.num_banks = num_coh_regions;
++	manifest->plat_coh_region.banks = NULL;
++	manifest->plat_coh_region.checksum = 0UL;
++
+ 	/* Ensure the manifest is not larger than the shared buffer */
+ 	assert((sizeof(struct rmm_manifest) +
+ 		(sizeof(struct console_info) * num_consoles) +
+-		(sizeof(struct memory_bank) * num_banks)) <= RMM_SHARED_SIZE);
++		(sizeof(struct memory_bank) * num_banks) +
++		(sizeof(struct memory_bank) * num_ncoh_regions) +
++		(sizeof(struct memory_bank) * num_coh_regions))
++		<= RMM_SHARED_SIZE);
+ 
+ 	/* Calculate checksum of plat_dram structure */
+ 	checksum = num_banks + (uint64_t)bank_ptr;
+@@ -465,6 +561,17 @@ int plat_rmmd_load_manifest(struct rmm_manifest *manifest)
+ 	/* Checksum must be 0 */
+ 	manifest->plat_console.checksum = ~checksum + 1UL;
+ 
++	/*
++	 * Calculate the checksum of device non-coherent address ranges
++	 */
++	set_memory_region(&manifest->plat_ncoh_region, ncoh_region_ptr,
++			  ncoh_region_data, num_ncoh_regions);
++	/*
++	 * Calculate the checksum of device coherent address ranges
++	 */
++	set_memory_region(&manifest->plat_coh_region, coh_region_ptr,
++			  coh_region_data, num_coh_regions);
++
+ 	return 0;
+ }
+ 
+diff --git a/plat/qemu/qemu_sbsa/include/platform_def.h b/plat/qemu/qemu_sbsa/include/platform_def.h
+index 07124cae..0d60ca99 100644
+--- a/plat/qemu/qemu_sbsa/include/platform_def.h
++++ b/plat/qemu/qemu_sbsa/include/platform_def.h
+@@ -261,6 +261,18 @@
+ #define DEVICE2_BASE			0x50000000
+ #define DEVICE2_SIZE			0x00001000
+ 
++/* PCI MMIO AREAS */
++#define SBSA_PCIE_MMIO_BASE		0x80000000
++#define SBSA_PCIE_MMIO_SIZE		0x70000000
++#define SBSA_PCIE_MMIO_HIGH_BASE	0x100000000
++/*
++ * The second PCIE MMIO areas is 1020GB wide, which needs to be
++ * taken into account when computing the amount of granules needed
++ * to marshal that area.  10GB should be plenty and much easier to
++ * allocate granules for.
++ */
++#define SBSA_PCIE_MMIO_HIGH_SIZE	0x280000000
++
+ /*
+  * GIC related constants
+  * We use GICv3 where CPU Interface registers are not memory mapped
+diff --git a/plat/qemu/qemu_sbsa/include/qemu_sbsa_pas_def.h b/plat/qemu/qemu_sbsa/include/qemu_sbsa_pas_def.h
+index 97ca4898..894555e0 100644
+--- a/plat/qemu/qemu_sbsa/include/qemu_sbsa_pas_def.h
++++ b/plat/qemu/qemu_sbsa/include/qemu_sbsa_pas_def.h
+@@ -62,6 +62,14 @@
+ 					       GPT_GPI_REALM)
+ #endif /* ENABLE_RMM */
+ 
++#define QEMU_PAS_PCI_MEM_1	GPT_MAP_REGION_GRANULE(SBSA_PCIE_MMIO_BASE, \
++						       SBSA_PCIE_MMIO_SIZE, \
++						       GPT_GPI_NS)
++
++#define QEMU_PAS_PCI_MEM_2	GPT_MAP_REGION_GRANULE(SBSA_PCIE_MMIO_HIGH_BASE, \
++						       SBSA_PCIE_MMIO_HIGH_SIZE, \
++						       GPT_GPI_NS)
++
+ /* Cover 4TB with L0GTP */
+ #define PLAT_QEMU_GPCCR_PPS	GPCCR_PPS_4TB
+ #define PLAT_QEMU_PPS		SZ_4T

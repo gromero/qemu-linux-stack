@@ -13,7 +13,7 @@ clone()
     ./clone.sh \
         linux \
         https://gitlab.arm.com/linux-arm/linux-cca \
-        cca/topics/cca-da-gmem-backend-v5 \
+        cca/topics/cca-tdisp-upstream-rfc-v4 \
         patches/linux-include-linux-compiler-add-DEBUGGER-attribute-for-functions.patch
 }
 
@@ -54,9 +54,8 @@ build()
     scripts/config --enable IOMMUFD_DRIVER
     scripts/config --enable VFIO_DEVICE_CDEV
     scripts/config --disable VFIO_CONTAINER
-    # guest_memfd-backed device memory (cca-da-gmem-backend)
+    # vfio-pci is used by host.sh to hand the device to the realm
     scripts/config --enable VFIO_PCI
-    scripts/config --enable VFIO_PCI_GMEM
     # host share (/host) over virtio-9p, used by rootfs/common/init
     scripts/config --enable NET_9P
     scripts/config --enable NET_9P_VIRTIO

@@ -1,0 +1,51 @@
+From aae98aa9ee206984fd4ed0a716a321b166839fe3 Mon Sep 17 00:00:00 2001
+From: AlexeiFedorov <Alexei.Fedorov@arm.com>
+Date: Wed, 22 Jul 2026 10:47:54 +0100
+Subject: [PATCH] fix(qemu): make BDF mapping top inclusive
+
+Change the BDF mapping upper bound from exclusive to inclusive.
+
+Change-Id: Iba4f29e618c71bc7390e79a556a633942b01ad6a
+Signed-off-by: AlexeiFedorov <Alexei.Fedorov@arm.com>
+(cherry picked from commit 9592c049fb73707d603bc2f64ec9e55f190af855)
+---
+ include/services/rmm_core_manifest.h | 6 +++---
+ plat/qemu/common/qemu_common.c       | 2 +-
+ 2 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/include/services/rmm_core_manifest.h b/include/services/rmm_core_manifest.h
+index c094f6ae..7ad152a2 100644
+--- a/include/services/rmm_core_manifest.h
++++ b/include/services/rmm_core_manifest.h
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 2022-2025, Arm Limited. All rights reserved.
++ * Copyright (c) 2022-2026, Arm Limited. All rights reserved.
+  *
+  * SPDX-License-Identifier: BSD-3-Clause
+  */
+@@ -135,9 +135,9 @@ CASSERT(offsetof(struct smmu_list, checksum) == 16UL,
+ /* PCIe BDF Mapping Info structure */
+ struct bdf_mapping_info {
+ 	uint16_t mapping_base;	/* Base of BDF mapping (inclusive) */
+-	uint16_t mapping_top;	/* Top of BDF mapping (exclusive) */
++	uint16_t mapping_top;	/* Top of BDF mapping (inclusive) */
+ 	uint16_t mapping_off;	/* Mapping offset, as per Arm Base System Architecture: */
+-				/* StreamID = zero_extend(RequesterID[N-1:0]) + (1<<N)*Constant_B */
++				/* StreamID = RequesterID[15:0] + (1<<16)*mapping_off */
+ 	uint16_t smmu_idx;	/* SMMU index in smmu_info[] array */
+ };
+ 
+diff --git a/plat/qemu/common/qemu_common.c b/plat/qemu/common/qemu_common.c
+index f5e19b9b..07b40904 100644
+--- a/plat/qemu/common/qemu_common.c
++++ b/plat/qemu/common/qemu_common.c
+@@ -291,7 +291,7 @@ const struct memory_bank coh_region_data[] = {};
+ const struct bdf_mapping_info rc0rp0_bdf_data[] = {
+ 	/* BDF0 */
+ 	{0U,		/* mapping_base */
+-	 0x8000U,	/* mapping_top */
++	 0x7FFFU,	/* mapping_top */
+ 	 0U,		/* mapping_off */
+ 	 0U		/* smmu_idx */
+ 	}

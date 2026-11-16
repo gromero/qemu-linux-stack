@@ -1,7 +1,7 @@
-From 6b5e6a4e446c6fc09bf53ef5cc2fac8bd03a803e Mon Sep 17 00:00:00 2001
+From 0e071ec24c69ae560c7b4c7e42e4a8f5e620ec8d Mon Sep 17 00:00:00 2001
 From: Gustavo Romero <gusbromero@gmail.com>
 Date: Sun, 15 Nov 2026 21:07:06 +0100
-Subject: [PATCH 1/2] feat(qemu-sbsa): hand the SMMUv3 over to the RMM
+Subject: [PATCH] feat(qemu-sbsa): hand the SMMUv3 over to the RMM
 
 The RMM (TF-RMM main) no longer hardcodes the SMMUv3 base and only
 manages SMMUs described in the boot manifest. Describe the sbsa-ref
@@ -19,10 +19,10 @@ Ported from the TF-A v2.13-based patch
  4 files changed, 66 insertions(+), 1 deletion(-)
 
 diff --git a/plat/qemu/common/qemu_bl31_setup.c b/plat/qemu/common/qemu_bl31_setup.c
-index 53fea000..f34107b4 100644
+index 6480233b..e8bd523e 100644
 --- a/plat/qemu/common/qemu_bl31_setup.c
 +++ b/plat/qemu/common/qemu_bl31_setup.c
-@@ -26,6 +26,10 @@
+@@ -25,6 +25,10 @@
  #endif /* ENABLE_FEAT_RME */
  #ifdef PLAT_qemu_sbsa
  #include <sbsa_platform.h>
@@ -33,7 +33,7 @@ index 53fea000..f34107b4 100644
  #endif
  
  #include "qemu_private.h"
-@@ -325,6 +329,25 @@ void bl31_plat_arch_setup(void)
+@@ -316,6 +320,25 @@ void bl31_plat_arch_setup(void)
  			ERROR("gpt_runtime_init() failed!\n");
  			panic();
  		}
@@ -57,14 +57,14 @@ index 53fea000..f34107b4 100644
 +		}
 +#endif
  	}
- }
+ #endif /* ENABLE_FEAT_RME */
  
 diff --git a/plat/qemu/common/qemu_common.c b/plat/qemu/common/qemu_common.c
-index 420dfa31..e7170c47 100644
+index 07b40904..5bc42bb9 100644
 --- a/plat/qemu/common/qemu_common.c
 +++ b/plat/qemu/common/qemu_common.c
-@@ -18,6 +18,10 @@
- #include <services/firme/firme_mecid.h>
+@@ -15,6 +15,10 @@
+ #include <services/el3_spmc_ffa_memory.h>
  #if ENABLE_RMM
  #include <services/rmm_core_manifest.h>
 +#ifdef PLAT_qemu_sbsa
@@ -74,7 +74,7 @@ index 420dfa31..e7170c47 100644
  #endif
  #ifdef PLAT_qemu_sbsa
  #include <sbsa_platform.h>
-@@ -331,10 +335,27 @@ const struct root_complex_info rc_data[] = {
+@@ -325,10 +329,27 @@ const struct root_complex_info rc_data[] = {
  /* Number of device non-coherent address ranges */
  #define QEMU_RMM_COH_REGIONS	ARRAY_SIZE(coh_region_data)
  /* Number of SMMUs */
@@ -103,7 +103,7 @@ index 420dfa31..e7170c47 100644
  #endif /* PLAT_qemu */
  
  /*
-@@ -681,6 +702,19 @@ int plat_rmmd_load_manifest(struct rmm_manifest *manifest)
+@@ -675,6 +696,19 @@ int plat_rmmd_load_manifest(struct rmm_manifest *manifest)
  	manifest->plat_smmu.smmus = NULL;
  	manifest->plat_smmu.checksum = 0UL;
  
@@ -124,10 +124,10 @@ index 420dfa31..e7170c47 100644
  	assert((sizeof(struct rmm_manifest) +
  		(sizeof(struct console_info) * num_consoles) +
 diff --git a/plat/qemu/qemu_sbsa/include/platform_def.h b/plat/qemu/qemu_sbsa/include/platform_def.h
-index a479f2f5..0145b46f 100644
+index d75410bb..3fba5e54 100644
 --- a/plat/qemu/qemu_sbsa/include/platform_def.h
 +++ b/plat/qemu/qemu_sbsa/include/platform_def.h
-@@ -242,6 +242,10 @@
+@@ -257,6 +257,10 @@
  /* This is map from NORMAL_UART up to SECURE_UART_MM */
  #define DEVICE1_BASE			0x60000000
  #define DEVICE1_SIZE			0x10041000
@@ -139,10 +139,10 @@ index a479f2f5..0145b46f 100644
  #define DEVICE2_BASE			0x50000000
  #define DEVICE2_SIZE			0x00001000
 diff --git a/plat/qemu/qemu_sbsa/platform.mk b/plat/qemu/qemu_sbsa/platform.mk
-index 46ef3bcf..c1c26f18 100644
+index 578b3177..bf0a1fef 100644
 --- a/plat/qemu/qemu_sbsa/platform.mk
 +++ b/plat/qemu/qemu_sbsa/platform.mk
-@@ -61,6 +61,10 @@ endif
+@@ -72,6 +72,10 @@ endif
  
  ifeq (${ENABLE_RMM},1)
  BL31_SOURCES		+=	${PLAT_QEMU_PATH}/plat_rmm_mem_carveout.c
@@ -153,6 +153,3 @@ index 46ef3bcf..c1c26f18 100644
  endif
  
  
--- 
-2.47.3
-

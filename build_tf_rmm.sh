@@ -13,7 +13,7 @@ clone()
     ./clone.sh \
         tf-rmm \
         https://review.trustedfirmware.org/TF-RMM/tf-rmm.git \
-        9c342901bb7a9f265312f371280536cf9afb5b79 \
+        7f0d6b222bc02c79f45d1cb95c26d3586db18153 \
         patches/rmm-silence-Unhandled-read-write-regs-info.patch \
         patches/rmm-add-granules-for-non-coherent-devices.patch
 }

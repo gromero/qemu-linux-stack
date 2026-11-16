@@ -5,7 +5,7 @@
 # kernel/rootfs built by ./build_kernel.sh and ./build_rootfs.sh.
 #
 # Model parameters mirror Shrinkwrap's FVP_Base_RevC-2xAEMvA-rme.yaml (+arch
-# v9.2) and TF-RMM's model-enable-da.yaml (FVP_DA_DIR, see below).
+# v9.2) and TF-RMM 7f0d6b22's model-enable-da.yaml (FVP_DA_DIR, see below).
 #
 # Environment:
 #   FVP         model binary            (default: FVP_Base_RevC-2xAEMvA in PATH)
@@ -150,8 +150,9 @@ $FVP \
     -C pci.enable_device_id_checks=0 \
     -C pci.hierarchy_file_name=$FVP_DA_DIR/pci_fixedup.json \
     -C pci.pci_smmuv3.mmu.SMMU_AIDR=0x3 \
-    -C pci.pci_smmuv3.mmu.SMMU_IDR0=0x498F769B \
-    -C pci.pci_smmuv3.mmu.SMMU_IDR1=0xE733D10 \
+    `# SMMU_IDR0.BTM[5] = 1: RMM 7f0d6b22 relies on broadcast TLB maintenance` \
+    -C pci.pci_smmuv3.mmu.SMMU_IDR0=0x498F76BB \
+    -C pci.pci_smmuv3.mmu.SMMU_IDR1=0xCE73D10 \
     -C pci.pci_smmuv3.mmu.SMMU_IDR3=0x773C \
     -C pci.pci_smmuv3.mmu.SMMU_IDR5=0x4F6 \
     -C pci.pci_smmuv3.mmu.SMMU_S_IDR0=0x1000000 \

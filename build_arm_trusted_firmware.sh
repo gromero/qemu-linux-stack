@@ -13,9 +13,16 @@ clone()
     ./clone.sh \
         arm-trusted-firmware \
         https://github.com/ARM-software/arm-trusted-firmware \
-        a881364e03b0c5b3a8c00f20ad6fbdda53a57031 \
-        patches/arm-trusted-firmware-qemu-sbsa-hand-the-SMMUv3-over-to-the-RMM.patch \
-        patches/arm-trusted-firmware-qemu-sbsa-add-FIRME-IDE-KM-stubs.patch
+        7bbda56cecb40232444c223615ba9e8c6968c4b6 \
+        patches/arm-trusted-firmware-v5-01-qemu-move-manifest-definition-out-of-function.patch \
+        patches/arm-trusted-firmware-v5-02-qemu-upgrade-boot-manifest-structure-to-version-5.patch \
+        patches/arm-trusted-firmware-v5-03-qemu-add-support-for-coherent-and-non-coherent-memory.patch \
+        patches/arm-trusted-firmware-v5-04-qemu-add-support-for-smmu-area.patch \
+        patches/arm-trusted-firmware-v5-05-qemu-add-support-for-PCIe-root-complex-memory.patch \
+        patches/arm-trusted-firmware-v5-06-qemu-add-plat-rmmd-reserve-memory-for-SBSA-platform.patch \
+        patches/arm-trusted-firmware-v5-07-qemu-make-BDF-mapping-top-inclusive.patch \
+        patches/arm-trusted-firmware-v5-08-qemu-sbsa-hand-the-SMMUv3-over-to-the-RMM.patch \
+        patches/arm-trusted-firmware-v5-09-qemu-Add-stubs-to-support-IDE-key-management.patch
 }
 
 build()

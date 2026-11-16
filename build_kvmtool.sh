@@ -13,7 +13,7 @@ clone()
     ./clone.sh \
         kvmtool \
         https://gitlab.arm.com/linux-arm/kvmtool-cca \
-        scratch/cca-tdisp-integration-v7 \
+        cca/topics/cca-tdisp-upstream-rfc-v4 \
         patches/kvmtool-irq-Avoid-concurrent-access-from-virtio-and-vfio-sub.patch
 }
 
