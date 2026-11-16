@@ -20,7 +20,8 @@ clone()
         edk2-platforms \
         https://github.com/tianocore/edk2-platforms \
         d672a812054e9d4fe5868a1ee65f438c10710535 \
-        ../patches/edk2-platforms-SbsaQemu-RME-move-system-memory-base-to-2GB.patch
+        ../patches/edk2-platforms-SbsaQemu-RME-move-system-memory-base-to-2GB.patch \
+        ../patches/edk2-platforms-SbsaQemu-IORT-advertise-CANWBS-on-root-complex.patch
     popd
 }
 

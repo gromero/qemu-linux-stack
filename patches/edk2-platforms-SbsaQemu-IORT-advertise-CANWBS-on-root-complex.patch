@@ -1,0 +1,32 @@
+From fd33b0ec31eee344668c4224fad90887a8b4096c Mon Sep 17 00:00:00 2001
+From: Gustavo Romero <gromero@redhat.com>
+Date: Mon, 16 Nov 2026 19:18:17 +0100
+Subject: [PATCH] Silicon/Qemu/SbsaQemu: advertise CANWBS on the IORT root
+ complex
+
+Set the root complex node MemoryAccessFlags to CPM | DACS | CANWBS. QEMU's
+PCIe is fully coherent (the node already sets CacheCoherentAttribute), and
+Linux only allows an iommufd vIOMMU (needed for nested and Realm device
+assignment) when the root complex is CANWBS or the SMMU has S2FWB, which
+QEMU's SMMUv3 does not implement. Without it, kvmtool fails with:
+
+  Error: 0000:01:00.0: failed to allocate VIOMMU -95
+---
+ .../Qemu/SbsaQemu/Drivers/SbsaQemuAcpiDxe/SbsaQemuAcpiDxe.c   | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/Silicon/Qemu/SbsaQemu/Drivers/SbsaQemuAcpiDxe/SbsaQemuAcpiDxe.c b/Silicon/Qemu/SbsaQemu/Drivers/SbsaQemuAcpiDxe/SbsaQemuAcpiDxe.c
+index d23ce99c9..bedd1e1ae 100644
+--- a/Silicon/Qemu/SbsaQemu/Drivers/SbsaQemuAcpiDxe/SbsaQemuAcpiDxe.c
++++ b/Silicon/Qemu/SbsaQemu/Drivers/SbsaQemuAcpiDxe/SbsaQemuAcpiDxe.c
+@@ -129,7 +129,9 @@ AddIortTable (
+       1,                                          // CacheCoherentAttribute
+       0,                                          // AllocationHints
+       0,                                          // Reserved
+-      1,                                          // MemoryAccessFlags
++      // CPM | DACS | CANWBS: QEMU PCIe is fully coherent; CANWBS is
++      // needed for iommufd vIOMMU (nested/Realm) allocation
++      0x7,                                        // MemoryAccessFlags
+       EFI_ACPI_IORT_ROOT_COMPLEX_ATS_UNSUPPORTED, // AtsAttribute
+       0x0,                                        // PciSegmentNumber
+       0,                                          // MemoryAddressSize
