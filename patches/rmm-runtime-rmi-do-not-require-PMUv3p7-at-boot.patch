@@ -1,0 +1,58 @@
+From edf883d297ae320c6cd902b7c45780abccf8692d Mon Sep 17 00:00:00 2001
+From: Soby Mathew <soby.mathew@arm.com>
+Date: Mon, 7 Sep 2026 12:04:54 +0100
+Subject: [PATCH] fix(runtime/rmi): do not require PMUv3p7 at boot
+
+Remove the unconditional PMUv3p7 assertion and only advertise Realm PMU
+support when PMUv3p7 or newer is available.
+
+Change-Id: I0f2f2bd92e3e833dde0a3dafde87d86d9340f971
+Signed-off-by: Soby Mathew <soby.mathew@arm.com>
+(cherry picked from commit 1e68acea163cc73271b1a1072bbd6fffc38259f6)
+---
+ runtime/rmi/feature.c | 23 +++++++++++++----------
+ 1 file changed, 13 insertions(+), 10 deletions(-)
+
+diff --git a/runtime/rmi/feature.c b/runtime/rmi/feature.c
+index 09251f8b..95892321 100644
+--- a/runtime/rmi/feature.c
++++ b/runtime/rmi/feature.c
+@@ -4,7 +4,6 @@
+  */
+ 
+ #include <arch_features.h>
+-#include <assert.h>
+ #include <dev_assign_layout.h>
+ #include <feature.h>
+ #include <mec.h>
+@@ -61,17 +60,21 @@ unsigned long get_feature_register_0(void)
+ 	}
+ 
+ 
+-	/* RMM supports PMUv3p7+ */
+-	assert(read_pmu_version() >= ID_AA64DFR0_EL1_PMUv3p7);
+ 	/* TODO: disable PMU temporarily for v2.0 */
+ #if 0
+-	/* Set support for PMUv3 */
+-	feat_reg0 |= INPLACE(RMI_FEATURE_REGISTER_0_PMU_EN,
+-				RMI_FEATURE_TRUE);
+-
+-	/* Set number of PMU counters available */
+-	feat_reg0 |= INPLACE(RMI_FEATURE_REGISTER_0_PMU_NUM_CTRS,
+-				EXTRACT(PMCR_EL0_N, read_pmcr_el0()));
++	/*
++	 * Arm ARM says that when FEAT_PMUv3 and FEAT_RME are implemented, FEAT_PMUv3p7 is
++	 * implemented. Enable PMU for realm only if PMUv3p7+ is available.
++	 */
++	if (read_pmu_version() >= ID_AA64DFR0_EL1_PMUv3p7) {
++		/* Set support for PMUv3 */
++		feat_reg0 |= INPLACE(RMI_FEATURE_REGISTER_0_PMU_EN,
++					RMI_FEATURE_TRUE);
++
++		/* Set number of PMU counters available */
++		feat_reg0 |= INPLACE(RMI_FEATURE_REGISTER_0_PMU_NUM_CTRS,
++					EXTRACT(PMCR_EL0_N, read_pmcr_el0()));
++	}
+ #endif
+ 
+ 	/* Set number of breakpoints and watchpoints supported, minus 1 */
